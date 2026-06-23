@@ -1,0 +1,158 @@
+<section class="games-page">
+  <header class="page-header">
+    <div>
+      <h1>إدارة الألعاب</h1>
+      <p>عرض الألعاب وإضافتها وتعديلها مع تعيين مسؤول اللعبة</p>
+    </div>
+    <button class="primary-btn" type="button" (click)="showForm() ? closeForm() : openCreateForm()">
+      @if (showForm()) {
+        إلغاء
+      } @else {
+        + إضافة لعبة
+      }
+    </button>
+  </header>
+
+  @if (successMessage()) {
+    <div class="alert success" role="status">{{ successMessage() }}</div>
+  }
+
+  @if (errorMessage()) {
+    <div class="alert error" role="alert">{{ errorMessage() }}</div>
+  }
+
+  @if (showForm()) {
+    <div class="form-card">
+      <h2>{{ isEditing ? 'تعديل اللعبة' : 'إضافة لعبة جديدة' }}</h2>
+      <form class="game-form" [formGroup]="gameForm" (ngSubmit)="saveGame()">
+        <div class="form-grid">
+          <div class="field">
+            <label for="nameAr">الاسم بالعربية</label>
+            <input id="nameAr" type="text" formControlName="nameAr" placeholder="أفعوانية" />
+            @if (gameForm.controls.nameAr.touched && gameForm.controls.nameAr.invalid) {
+              <span class="field-error">الاسم العربي مطلوب</span>
+            }
+          </div>
+
+          <div class="field">
+            <label for="nameEn">الاسم بالإنجليزية</label>
+            <input id="nameEn" type="text" formControlName="nameEn" placeholder="Roller Coaster" />
+            @if (gameForm.controls.nameEn.touched && gameForm.controls.nameEn.invalid) {
+              <span class="field-error">الاسم الإنجليزي مطلوب</span>
+            }
+          </div>
+
+          <div class="field">
+            <label for="price">السعر (ريال)</label>
+            <input id="price" type="number" formControlName="price" min="1" step="1" />
+            @if (gameForm.controls.price.touched && gameForm.controls.price.invalid) {
+              <span class="field-error">أدخل سعرًا صالحًا</span>
+            }
+          </div>
+
+          <div class="field">
+            <label for="gameBoyId">مسؤول اللعبة</label>
+            <select id="gameBoyId" formControlName="gameBoyId">
+              <option value="">بدون تعيين</option>
+              @for (operator of gameBoyOptions(); track operator.id) {
+                <option [value]="operator.id">{{ operator.name }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field checkbox-field">
+            <label class="checkbox-label">
+              <input type="checkbox" formControlName="isActive" />
+              <span>اللعبة نشطة</span>
+            </label>
+          </div>
+        </div>
+
+        <button class="primary-btn submit" type="submit" [disabled]="isSaving()">
+          @if (isSaving()) {
+            جاري الحفظ...
+          } @else {
+            {{ isEditing ? 'حفظ التعديلات' : 'حفظ اللعبة' }}
+          }
+        </button>
+      </form>
+    </div>
+  }
+
+  <div class="list-card">
+    <div class="table-toolbar">
+      <div class="search-field">
+        <input
+          type="search"
+          [formControl]="searchControl"
+          (input)="onSearchInput()"
+          placeholder="بحث بالاسم..."
+          aria-label="بحث الألعاب"
+        />
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8" />
+          <path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+        </svg>
+      </div>
+      <span class="count-badge">{{ games().length }} لعبة</span>
+    </div>
+
+    @if (isLoading()) {
+      <div class="state-box">جاري التحميل...</div>
+    } @else if (games().length === 0) {
+      <div class="state-box">لا توجد ألعاب.</div>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>الاسم (عربي)</th>
+              <th>الاسم (إنجليزي)</th>
+              <th>السعر</th>
+              <th>الحالة</th>
+              <th>مسؤول اللعبة</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (game of games(); track game.id) {
+              <tr>
+                <td>
+                  <div class="game-cell">
+                    <span class="game-icon">🎢</span>
+                    <span>{{ game.nameAr }}</span>
+                  </div>
+                </td>
+                <td>{{ game.nameEn }}</td>
+                <td>{{ game.price }} {{ game.currency }}</td>
+                <td>
+                  <span class="status-badge" [class.active]="game.isActive" [class.inactive]="!game.isActive">
+                    {{ game.isActive ? 'نشطة' : 'غير نشطة' }}
+                  </span>
+                </td>
+                <td>{{ game.gameBoyName ?? '—' }}</td>
+                <td>
+                  <div class="actions">
+                    <button class="edit-btn" type="button" (click)="openEditForm(game)">تعديل</button>
+                    <button
+                      class="delete-btn"
+                      type="button"
+                      [disabled]="deletingGameId() === game.id"
+                      (click)="deleteGame(game)"
+                    >
+                      @if (deletingGameId() === game.id) {
+                        جاري الحذف...
+                      } @else {
+                        حذف
+                      }
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</section>

@@ -1,0 +1,42 @@
+:root {
+  --gc-plum: #702d62;
+  --gc-plum-dark: #5c2452;
+  --gc-plum-light: #8a3a75;
+  --gc-navy: #353d84;
+  --gc-navy-hover: #2a3169;
+  --gc-bg: #f4f4f4;
+  --gc-white: #ffffff;
+  --gc-text: #1a1a1a;
+  --gc-text-secondary: #6b7280;
+  --gc-border: #e0e0e0;
+  --gc-input-bg: #fafafa;
+  --gc-radius-lg: 18px;
+  --gc-radius-md: 10px;
+  --gc-radius-pill: 999px;
+  --gc-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --gc-font: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--gc-font);
+  background: var(--gc-bg);
+  color: var(--gc-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font-family: inherit;
+}

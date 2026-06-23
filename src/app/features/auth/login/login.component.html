@@ -1,0 +1,100 @@
+<div class="login-page" dir="rtl">
+  <aside class="brand-panel">
+    <div class="brand-content">
+      <div class="brand-logo">
+        <svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <circle cx="24" cy="24" r="22" stroke="currentColor" stroke-width="2" opacity="0.35" />
+          <path
+            d="M16 30c4-8 12-8 16 0M18 22c2-4 10-4 12 0"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          />
+          <circle cx="24" cy="16" r="3" fill="currentColor" />
+        </svg>
+      </div>
+      <h1 class="brand-title">جاردن سيتي</h1>
+      <p class="brand-subtitle">لوحة تحكم المسؤول</p>
+      <p class="brand-description">
+        إدارة الألعاب، البطاقات، والمستخدمين من مكان واحد.
+      </p>
+    </div>
+  </aside>
+
+  <main class="login-main">
+    <div class="login-card">
+      <header class="login-header">
+        <h2>تسجيل الدخول</h2>
+        <p>أدخل بيانات حساب المسؤول للمتابعة</p>
+      </header>
+
+      <form class="login-form" [formGroup]="form" (ngSubmit)="submit()">
+        <div class="field">
+          <label for="email">البريد الإلكتروني</label>
+          <div class="input-wrap" [class.invalid]="form.controls.email.touched && form.controls.email.invalid">
+            <input
+              id="email"
+              type="email"
+              formControlName="email"
+              placeholder="admin@gardencity.com"
+              autocomplete="email"
+            />
+            <span class="input-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M4 6h16v12H4V6zm0 0 8 7 8-7"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </span>
+          </div>
+          @if (form.controls.email.touched && form.controls.email.hasError('required')) {
+            <span class="field-error">البريد الإلكتروني مطلوب</span>
+          }
+          @if (form.controls.email.touched && form.controls.email.hasError('email')) {
+            <span class="field-error">أدخل بريدًا إلكترونيًا صالحًا</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="password">كلمة المرور</label>
+          <div class="input-wrap" [class.invalid]="form.controls.password.touched && form.controls.password.invalid">
+            <input
+              id="password"
+              type="password"
+              formControlName="password"
+              placeholder="••••••••"
+              autocomplete="current-password"
+            />
+            <span class="input-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.8" />
+                <path d="M8 11V8a4 4 0 118 0v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+              </svg>
+            </span>
+          </div>
+          @if (form.controls.password.touched && form.controls.password.hasError('required')) {
+            <span class="field-error">كلمة المرور مطلوبة</span>
+          }
+          @if (form.controls.password.touched && form.controls.password.hasError('minlength')) {
+            <span class="field-error">كلمة المرور يجب أن تكون 8 أحرف على الأقل</span>
+          }
+        </div>
+
+        @if (errorMessage()) {
+          <div class="form-error" role="alert">{{ errorMessage() }}</div>
+        }
+
+        <button class="submit-btn" type="submit" [disabled]="isSubmitting()">
+          @if (isSubmitting()) {
+            جاري تسجيل الدخول...
+          } @else {
+            تسجيل الدخول
+          }
+        </button>
+      </form>
+    </div>
+  </main>
+</div>

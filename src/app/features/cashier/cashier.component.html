@@ -1,0 +1,229 @@
+<section class="cashier-page">
+  <header class="page-header">
+    <div>
+      <h1>نافذة الكاشير</h1>
+      <p>إصدار البطاقات، الشحن، وإعادة الطباعة</p>
+    </div>
+  </header>
+
+  <div class="cashier-layout">
+    <aside class="tab-list">
+      @for (tab of tabs; track tab.id) {
+        <button
+          class="tab-btn"
+          type="button"
+          [class.active]="activeTab() === tab.id"
+          (click)="setTab(tab.id)"
+        >
+          <span class="tab-label">{{ tab.label }}</span>
+          <span class="tab-desc">{{ tab.description }}</span>
+        </button>
+      }
+    </aside>
+
+    <div class="workspace">
+      <div class="operation-card">
+        @switch (activeTab()) {
+          @case ('new-topup') {
+            <h2>بطاقة عائلة جديدة + شحن</h2>
+            <p class="card-subtitle">أدخل بيانات العائلة والمبلغ الأولي</p>
+            <form [formGroup]="newTopupForm" (ngSubmit)="submitNewTopup()">
+              <div class="field">
+                <label for="holderName">اسم صاحب البطاقة</label>
+                <div class="input-wrap">
+                  <input id="holderName" type="text" formControlName="holderName" placeholder="عائلة محمد" />
+                </div>
+              </div>
+              <div class="field">
+                <label for="holderPhone">رقم الهاتف <span class="optional">(اختياري)</span></label>
+                <div class="input-wrap">
+                  <input id="holderPhone" type="tel" formControlName="holderPhoneNumber" placeholder="01001234567" />
+                </div>
+              </div>
+              <div class="field">
+                <label for="topupAmount">المبلغ (ريال)</label>
+                <div class="input-wrap">
+                  <input id="topupAmount" type="number" formControlName="amount" min="1" step="1" />
+                </div>
+              </div>
+              <button class="submit-btn" type="submit" [disabled]="isSubmitting()">
+                {{ isSubmitting() ? 'جاري الإصدار...' : 'إصدار البطاقة وطباعة QR' }}
+              </button>
+            </form>
+          }
+
+          @case ('add-funds') {
+            <h2>إضافة رصيد</h2>
+            <p class="card-subtitle">امسح البطاقة أو أدخل رقمها لشحن الرصيد</p>
+            <form [formGroup]="addFundsForm" (ngSubmit)="submitAddFunds()">
+              <div class="field">
+                <label for="addCardNumber">رقم البطاقة</label>
+                <div class="input-wrap">
+                  <input id="addCardNumber" type="text" formControlName="cardNumber" placeholder="GC-1001" />
+                  <span class="input-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                      <rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="1.8" />
+                      <rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="1.8" />
+                      <rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="1.8" />
+                      <rect x="14" y="14" width="3" height="3" fill="currentColor" />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="addAmount">المبلغ (ريال)</label>
+                <div class="input-wrap">
+                  <input id="addAmount" type="number" formControlName="amount" min="1" step="1" />
+                </div>
+              </div>
+              <button class="submit-btn" type="submit" [disabled]="isSubmitting()">
+                {{ isSubmitting() ? 'جاري الشحن...' : 'شحن البطاقة' }}
+              </button>
+            </form>
+          }
+
+          @case ('reprint') {
+            <h2>إعادة طباعة البطاقة</h2>
+            <p class="card-subtitle">ابحث بالبطاقة أو رقم الهاتف لإعادة طباعة QR</p>
+            <form [formGroup]="reprintForm" (ngSubmit)="submitReprint()">
+              <div class="field">
+                <label for="reprintCard">رقم البطاقة</label>
+                <div class="input-wrap">
+                  <input id="reprintCard" type="text" formControlName="cardNumber" placeholder="GC-1001" />
+                  <span class="input-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                      <rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="1.8" />
+                      <rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="1.8" />
+                      <rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="1.8" />
+                      <rect x="14" y="14" width="3" height="3" fill="currentColor" />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="reprintPhone">أو رقم الهاتف</label>
+                <div class="input-wrap">
+                  <input id="reprintPhone" type="tel" formControlName="holderPhoneNumber" placeholder="01001234567" />
+                </div>
+              </div>
+              <button class="submit-btn" type="submit" [disabled]="isSubmitting()">
+                {{ isSubmitting() ? 'جاري الطباعة...' : 'إعادة طباعة QR' }}
+              </button>
+            </form>
+          }
+
+          @case ('lookup') {
+            <h2>استعلام عن بطاقة</h2>
+            <p class="card-subtitle">اعرض الرصيد وسجل المعاملات</p>
+            <form [formGroup]="lookupForm" (ngSubmit)="submitLookup()">
+              <div class="field">
+                <label for="lookupCard">رقم البطاقة</label>
+                <div class="input-wrap">
+                  <input id="lookupCard" type="text" formControlName="cardNumber" placeholder="GC-1001" />
+                  <span class="input-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                      <rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="1.8" />
+                      <rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="1.8" />
+                      <rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="1.8" />
+                      <rect x="14" y="14" width="3" height="3" fill="currentColor" />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+              <button class="submit-btn" type="submit" [disabled]="isSubmitting()">
+                {{ isSubmitting() ? 'جاري البحث...' : 'بحث' }}
+              </button>
+            </form>
+          }
+        }
+
+        @if (errorMessage()) {
+          <div class="alert error" role="alert">{{ errorMessage() }}</div>
+        }
+      </div>
+
+      <div class="result-panel">
+        @if (printResult(); as result) {
+          <div class="result-card success-card">
+            <h3>تمت العملية بنجاح</h3>
+            <div class="qr-placeholder">
+              @if (qrCodeUrl()) {
+                <img class="qr-image" [src]="qrCodeUrl()!" [alt]="'رمز QR للبطاقة ' + result.cardNumber" />
+                <span>رمز QR جاهز للطباعة</span>
+                <button class="submit-btn" type="button" (click)="printQrCode(result.cardNumber)">
+                  طباعة QR
+                </button>
+              } @else {
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="1.5" />
+                  <rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="1.5" />
+                  <rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="1.5" />
+                  <rect x="14" y="14" width="3" height="3" fill="currentColor" />
+                </svg>
+                <span>جاري إنشاء رمز QR...</span>
+              }
+            </div>
+            <dl class="result-details">
+              <div><dt>رقم البطاقة</dt><dd>{{ result.cardNumber }}</dd></div>
+              <div><dt>الرصيد المتبقي</dt><dd>{{ result.remainingBalance }} {{ result.currency }}</dd></div>
+              @if (result.amount) {
+                <div><dt>المبلغ</dt><dd>{{ result.amount }} {{ result.currency }}</dd></div>
+              }
+              <div><dt>بواسطة</dt><dd>{{ result.issuedBy }}</dd></div>
+            </dl>
+          </div>
+        } @else if (cardDetails(); as details) {
+          <div class="result-card">
+            <h3>تفاصيل البطاقة</h3>
+            <div class="qr-placeholder">
+              @if (qrCodeUrl()) {
+                <img class="qr-image" [src]="qrCodeUrl()!" [alt]="'رمز QR للبطاقة ' + details.cardNumber" />
+                <span>رمز QR للبطاقة</span>
+                <button class="submit-btn" type="button" (click)="printQrCode(details.cardNumber)">
+                  طباعة QR
+                </button>
+              } @else {
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="1.5" />
+                  <rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="1.5" />
+                  <rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="1.5" />
+                  <rect x="14" y="14" width="3" height="3" fill="currentColor" />
+                </svg>
+                <span>جاري إنشاء رمز QR...</span>
+              }
+            </div>
+            <dl class="result-details">
+              <div><dt>رقم البطاقة</dt><dd>{{ details.cardNumber }}</dd></div>
+              <div><dt>صاحب البطاقة</dt><dd>{{ details.holderName }}</dd></div>
+              <div><dt>الهاتف</dt><dd>{{ details.holderPhoneNumber }}</dd></div>
+              <div><dt>الرصيد</dt><dd class="balance">{{ details.balance }} {{ details.currency }}</dd></div>
+            </dl>
+            @if (details.transactions.length > 0) {
+              <h4>آخر المعاملات</h4>
+              <ul class="txn-list">
+                @for (txn of details.transactions; track txn.id) {
+                  <li>
+                    <span class="txn-type">{{ txn.type }}</span>
+                    <span class="txn-amount">{{ txn.amount }} {{ txn.currency }}</span>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        } @else {
+          <div class="result-card empty-card">
+            <div class="qr-placeholder large">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="1.5" />
+                <rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="1.5" />
+                <rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="1.5" />
+                <rect x="14" y="14" width="3" height="3" fill="currentColor" />
+              </svg>
+              <span>منطقة معاينة البطاقة / QR</span>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</section>

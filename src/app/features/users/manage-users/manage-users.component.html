@@ -1,0 +1,154 @@
+<section class="users-page">
+  <header class="page-header">
+    <div>
+      <h1>إدارة المستخدمين</h1>
+      <p>عرض جميع المستخدمين وإضافة حسابات جديدة مع تحديد الأدوار</p>
+    </div>
+    <button class="primary-btn" type="button" (click)="toggleAddForm()">
+      @if (showAddForm()) {
+        إلغاء
+      } @else {
+        + إضافة مستخدم
+      }
+    </button>
+  </header>
+
+  @if (successMessage()) {
+    <div class="alert success" role="status">{{ successMessage() }}</div>
+  }
+
+  @if (errorMessage()) {
+    <div class="alert error" role="alert">{{ errorMessage() }}</div>
+  }
+
+  @if (showAddForm()) {
+    <div class="add-user-card">
+      <h2>إضافة مستخدم جديد</h2>
+      <form class="add-form" [formGroup]="addForm" (ngSubmit)="addUser()">
+        <div class="form-grid">
+          <div class="field">
+            <label for="displayedName">الاسم المعروض</label>
+            <input id="displayedName" type="text" formControlName="displayedName" placeholder="محمود أحمد" />
+            @if (addForm.controls.displayedName.touched && addForm.controls.displayedName.invalid) {
+              <span class="field-error">الاسم مطلوب (حرفان على الأقل)</span>
+            }
+          </div>
+
+          <div class="field">
+            <label for="email">البريد الإلكتروني</label>
+            <input id="email" type="email" formControlName="email" placeholder="user@gardencity.com" />
+            @if (addForm.controls.email.touched && addForm.controls.email.invalid) {
+              <span class="field-error">أدخل بريدًا إلكترونيًا صالحًا</span>
+            }
+          </div>
+
+          <div class="field">
+            <label for="password">كلمة المرور</label>
+            <input id="password" type="password" formControlName="password" placeholder="••••••••" />
+            @if (addForm.controls.password.touched && addForm.controls.password.invalid) {
+              <span class="field-error">كلمة المرور 8 أحرف على الأقل</span>
+            }
+          </div>
+
+          <div class="field">
+            <label for="role">الدور</label>
+            <select id="role" formControlName="role">
+              @for (role of roleOptions; track role.value) {
+                <option [value]="role.value">{{ role.label }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <button class="primary-btn submit" type="submit" [disabled]="isSaving()">
+          @if (isSaving()) {
+            جاري الحفظ...
+          } @else {
+            حفظ المستخدم
+          }
+        </button>
+      </form>
+    </div>
+  }
+
+  <div class="users-card">
+    <div class="table-toolbar">
+      <div class="search-field">
+        <input
+          type="search"
+          [formControl]="searchControl"
+          (input)="onSearchInput()"
+          placeholder="بحث بالاسم..."
+          aria-label="بحث المستخدمين"
+        />
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8" />
+          <path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+        </svg>
+      </div>
+      <span class="count-badge">{{ totalCount() }} مستخدم</span>
+    </div>
+
+    @if (isLoading()) {
+      <div class="state-box">جاري التحميل...</div>
+    } @else if (users().length === 0) {
+      <div class="state-box">لا يوجد مستخدمون.</div>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>الاسم</th>
+              <th>البريد الإلكتروني</th>
+              <th>الدور</th>
+              <th>تغيير الدور</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (user of users(); track user.id) {
+              <tr>
+                <td>
+                  <div class="user-cell">
+                    <span class="user-avatar">{{ user.displayName.charAt(0) }}</span>
+                    <span>{{ user.displayName }}</span>
+                  </div>
+                </td>
+                <td>{{ user.email }}</td>
+                <td>
+                  <span class="role-badge">{{ getRoleLabel(user.role) }}</span>
+                </td>
+                <td>
+                  <select
+                    class="role-select"
+                    [value]="user.role ?? 'Cashier'"
+                    [disabled]="updatingRoleFor() === user.id"
+                    (change)="onRoleChange(user, $any($event.target).value)"
+                  >
+                    @for (role of roleOptions; track role.value) {
+                      <option [value]="role.value">{{ role.label }}</option>
+                    }
+                  </select>
+                </td>
+                <td>
+                  <button
+                    class="delete-btn"
+                    type="button"
+                    [disabled]="deletingUserId() === user.id"
+                    (click)="deleteUser(user)"
+                  >
+                    @if (deletingUserId() === user.id) {
+                      جاري الحذف...
+                    } @else {
+                      حذف
+                    }
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</section>
