@@ -155,11 +155,16 @@ export class CashierComponent {
       return;
     }
 
-    const printWindow = window.open('', '_blank', 'width=500,height=700');
+    const printWindow = window.open('', '_blank', 'width=400,height=400');
     if (!printWindow) {
       this.errorMessage.set('تعذر فتح نافذة الطباعة. تحقق من إعدادات المتصفح.');
       return;
     }
+
+    // Bixolon SRP-350 uses 80mm roll paper — fixed height stops extra paper feed.
+    const labelWidthMm = 80;
+    const labelHeightMm = 70;
+    const qrSizeMm = 30;
 
     printWindow.document.write(`
       <!doctype html>
@@ -169,39 +174,68 @@ export class CashierComponent {
           <title>QR ${cardNumber}</title>
           <style>
             @page {
-              /* ضبط حجم الورقة: (4 سم × 7 سم) */
-              size: 4cm 7cm;
-              margin: 2mm;
+              /* ضبط حجم الورقة: (8 سم عرض × 7 سم طول) لطابعة حرارية */
+              size: ${labelWidthMm}mm ${labelHeightMm}mm;
+              margin: 0;
             }
+
             * {
               box-sizing: border-box;
             }
+
+            html,
             body {
+              width: ${labelWidthMm}mm;
+              height: ${labelHeightMm}mm;
+              max-height: ${labelHeightMm}mm;
+              min-height: ${labelHeightMm}mm;
               margin: 0;
-              font-family: Arial, sans-serif;
-              display: flex;
-              align-items: center;
-              justify-content: center;
+              padding: 0;
+              overflow: hidden;
             }
+
+            body {
+              font-family: Arial, sans-serif;
+            }
+
             .label {
-              width: 100%;
-              height: 100%;
+              width: ${labelWidthMm}mm;
+              height: ${labelHeightMm}mm;
+              max-height: ${labelHeightMm}mm;
+              padding: 4mm 2mm 2mm;
               display: flex;
               flex-direction: column;
               align-items: center;
-              justify-content: center;
-              gap: 6px;
+              justify-content: flex-start;
+              gap: 2mm;
               text-align: center;
+              overflow: hidden;
             }
+
             .label img {
-              width: 3cm;
-              height: 3cm;
+              width: ${qrSizeMm}mm;
+              height: ${qrSizeMm}mm;
               object-fit: contain;
+              display: block;
             }
+
             .card-number {
-              font-size: 11px;
+              font-size: 9pt;
               font-weight: 700;
-              letter-spacing: 0.4px;
+              line-height: 1.1;
+              letter-spacing: 0.2px;
+              word-break: break-all;
+            }
+
+            @media print {
+              html,
+              body,
+              .label {
+                width: ${labelWidthMm}mm !important;
+                height: ${labelHeightMm}mm !important;
+                max-height: ${labelHeightMm}mm !important;
+                overflow: hidden !important;
+              }
             }
           </style>
         </head>
@@ -211,10 +245,8 @@ export class CashierComponent {
             <div class="card-number">${cardNumber}</div>
           </div>
           <script>
-            window.onload = () => {
-              window.print();
-              window.close();
-            };
+            window.onload = () => window.print();
+            window.onafterprint = () => window.close();
           </script>
         </body>
       </html>
