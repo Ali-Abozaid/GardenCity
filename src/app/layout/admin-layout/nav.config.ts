@@ -1,6 +1,6 @@
 import { ApplicationRole } from '../../core/models/user.model';
 
-export type NavIcon = 'cashier' | 'users' | 'games' | 'dashboard';
+export type NavIcon = 'cashier' | 'users' | 'games' | 'dashboard' | 'reports';
 
 export interface NavItem {
   label: string;
@@ -26,6 +26,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'إدارة الألعاب',
     route: '/games',
     icon: 'games',
+    roles: ['Admin'],
+  },
+  {
+    label: 'التقارير',
+    route: '/reports',
+    icon: 'reports',
     roles: ['Admin'],
   },
   {

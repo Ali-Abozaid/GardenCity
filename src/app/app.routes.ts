@@ -6,6 +6,7 @@ import { CashierComponent } from './features/cashier/cashier.component';
 import { DashboardComponent } from './features/dashboard/dashboard.component';
 import { ManageGamesComponent } from './features/games/manage-games/manage-games.component';
 import { ManageUsersComponent } from './features/users/manage-users/manage-users.component';
+import { ReportsComponent } from './features/reports/reports.component';
 import { AdminLayoutComponent } from './layout/admin-layout/admin-layout.component';
 import { HomeRedirectComponent } from './layout/admin-layout/home-redirect.component';
 
@@ -37,6 +38,12 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         component: DashboardComponent,
+        canActivate: [roleGuard],
+        data: { roles: ['Admin'] },
+      },
+      {
+        path: 'reports',
+        component: ReportsComponent,
         canActivate: [roleGuard],
         data: { roles: ['Admin'] },
       },

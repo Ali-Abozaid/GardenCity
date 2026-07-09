@@ -96,3 +96,21 @@ export const CASHIER_TABS: { id: CashierTab; label: string; description: string 
   { id: 'reprint', label: 'إعادة طباعة', description: 'طباعة رمز QR للبطاقة' },
   { id: 'lookup', label: 'استعلام', description: 'عرض تفاصيل البطاقة والمعاملات' },
 ];
+
+export interface ReportQueryParams {
+  cashierId?: string;
+  fromDate: string;
+  toDate: string;
+}
+
+export interface CashierReportResponse {
+  totalAmount: number;
+  totalTransactions: number;
+  currency?: string;
+}
+
+export interface RefundReportResponse {
+  totalAmount: number;
+  totalRefunds: number;
+  currency?: string;
+}

@@ -155,98 +155,103 @@ export class CashierComponent {
       return;
     }
 
-    // Bixolon SRP-350: 80mm roll, portrait feed — short fixed height stops extra paper.
-    const paperWidthMm = 80;
-    const paperHeightMm = 42;
-    const qrSizeMm = 26;
-
-    const printWindow = window.open('', '_blank', `width=${paperWidthMm * 4},height=${paperHeightMm * 4}`);
+    const printWindow = window.open('', '_blank', 'width=400,height=400');
     if (!printWindow) {
       this.errorMessage.set('تعذر فتح نافذة الطباعة. تحقق من إعدادات المتصفح.');
       return;
     }
 
-    printWindow.document.open();
-    printWindow.document.write(`<!doctype html>
-<html>
-<head>
-<meta charset="utf-8" />
-<title>QR ${cardNumber}</title>
-<style>
-  @page {
-    size: ${paperWidthMm}mm ${paperHeightMm}mm portrait;
-    margin: 0;
-  }
-  html, body {
-    width: ${paperWidthMm}mm;
-    height: ${paperHeightMm}mm;
-    max-width: ${paperWidthMm}mm;
-    max-height: ${paperHeightMm}mm;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background: #fff;
-  }
-  body {
-    font-family: Arial, sans-serif;
-  }
-  .sheet {
-    width: ${paperWidthMm}mm;
-    height: ${paperHeightMm}mm;
-    margin: 0;
-    padding: 2mm 0 0;
-    text-align: center;
-    overflow: hidden;
-    page-break-after: avoid;
-    page-break-inside: avoid;
-  }
-  .sheet img {
-    width: ${qrSizeMm}mm;
-    height: ${qrSizeMm}mm;
-    display: block;
-    margin: 0 auto 1mm;
-  }
-  .card-number {
-    font-size: 8pt;
-    font-weight: 700;
-    line-height: 1;
-    margin: 0;
-    padding: 0;
-  }
-  @media print {
-    @page {
-      size: ${paperWidthMm}mm ${paperHeightMm}mm portrait;
-      margin: 0;
-    }
-    html, body, .sheet {
-      width: ${paperWidthMm}mm !important;
-      height: ${paperHeightMm}mm !important;
-      max-height: ${paperHeightMm}mm !important;
-      overflow: hidden !important;
-    }
-  }
-</style>
-</head>
-<body>
-<div class="sheet">
-  <img id="qr" src="${qrImage}" alt="${cardNumber}" />
-  <p class="card-number">${cardNumber}</p>
-</div>
-<script>
-  function doPrint() {
-    window.focus();
-    window.print();
-  }
-  const img = document.getElementById('qr');
-  if (img.complete) {
-    setTimeout(doPrint, 150);
-  } else {
-    img.onload = () => setTimeout(doPrint, 150);
-  }
-  window.onafterprint = () => window.close();
-</script>
-</body>
-</html>`);
+    // Bixolon SRP-350: 80mm roll, ~72mm printable width.
+    // Portrait (width <= height) prevents the browser from rotating the label.
+    const labelWidthMm = 72;
+    const labelHeightMm = 72;
+    const qrSizeMm = 32;
+
+    printWindow.document.write(`
+      <!doctype html>
+      <html lang="ar" dir="rtl">
+        <head>
+          <meta charset="utf-8" />
+          <title>QR ${cardNumber}</title>
+          <style>
+            @page {
+              /* طابعة حرارية: عرض 72مم × طول 72مم (وضع طولي لمنع الدوران) */
+              size: ${labelWidthMm}mm ${labelHeightMm}mm portrait;
+              margin: 0;
+            }
+
+            * {
+              box-sizing: border-box;
+            }
+
+            html,
+            body {
+              width: ${labelWidthMm}mm;
+              height: ${labelHeightMm}mm;
+              max-height: ${labelHeightMm}mm;
+              min-height: ${labelHeightMm}mm;
+              margin: 0;
+              padding: 0;
+              overflow: hidden;
+            }
+
+            body {
+              font-family: Arial, sans-serif;
+            }
+
+            .label {
+              width: ${labelWidthMm}mm;
+              height: ${labelHeightMm}mm;
+              max-height: ${labelHeightMm}mm;
+              padding: 3mm 2mm;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              gap: 2mm;
+              text-align: center;
+              overflow: hidden;
+            }
+
+            .label img {
+              width: ${qrSizeMm}mm;
+              height: ${qrSizeMm}mm;
+              object-fit: contain;
+              display: block;
+            }
+
+            .card-number {
+              font-size: 9pt;
+              font-weight: 700;
+              line-height: 1.1;
+              letter-spacing: 0.2px;
+              word-break: break-all;
+            }
+
+            @media print {
+              html,
+              body,
+              .label {
+                width: ${labelWidthMm}mm !important;
+                height: ${labelHeightMm}mm !important;
+                max-height: ${labelHeightMm}mm !important;
+                overflow: hidden !important;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="label">
+            <img src="${qrImage}" alt="QR ${cardNumber}" />
+            <div class="card-number">${cardNumber}</div>
+          </div>
+          <script>
+            window.onload = () => window.print();
+            window.onafterprint = () => window.close();
+          </script>
+        </body>
+      </html>
+    `);
     printWindow.document.close();
   }
 }

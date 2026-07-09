@@ -1,0 +1,95 @@
+<section class="reports-page">
+  <header class="page-header">
+    <div>
+      <h1>التقارير</h1>
+      <p>تقارير الكاشير والاسترداد حسب الفترة الزمنية</p>
+    </div>
+  </header>
+
+  @if (errorMessage()) {
+    <div class="alert error" role="alert">{{ errorMessage() }}</div>
+  }
+
+  <div class="filter-card">
+    <h2>فلاتر التقرير</h2>
+    <form class="filter-form" [formGroup]="filterForm" (ngSubmit)="loadReports()">
+      <div class="form-grid">
+        <div class="field">
+          <label for="cashierId">الكاشير / المسؤول</label>
+          <select id="cashierId" formControlName="cashierId">
+            <option value="">الكل</option>
+            @for (cashier of cashiers(); track cashier.id) {
+              <option [value]="cashier.id">
+                {{ cashier.displayName }} ({{ getRoleLabel(cashier.role) }})
+              </option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="fromDate">من تاريخ</label>
+          <input id="fromDate" type="datetime-local" formControlName="fromDate" />
+          @if (filterForm.controls.fromDate.touched && filterForm.controls.fromDate.invalid) {
+            <span class="field-error">تاريخ البداية مطلوب</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="toDate">إلى تاريخ</label>
+          <input id="toDate" type="datetime-local" formControlName="toDate" />
+          @if (filterForm.controls.toDate.touched && filterForm.controls.toDate.invalid) {
+            <span class="field-error">تاريخ النهاية مطلوب</span>
+          }
+        </div>
+      </div>
+
+      <button class="primary-btn" type="submit" [disabled]="isLoading()">
+        {{ isLoading() ? 'جاري التحميل...' : 'عرض التقارير' }}
+      </button>
+    </form>
+  </div>
+
+  @if (isLoading()) {
+    <div class="state-box">جاري تحميل التقارير...</div>
+  } @else if (hasSearched()) {
+    <div class="reports-grid">
+      <article class="report-card">
+        <h3>تقرير الكاشير</h3>
+        <p class="report-desc">إجمالي المبالغ وعدد المعاملات</p>
+
+        <dl class="stats">
+          <div class="stat-row amount-row">
+            <dt>إجمالي المبلغ</dt>
+            <dd class="amount-cell">
+              <span class="amount-value">{{ formatAmountValue(cashierReport()?.totalAmount ?? 0) }}</span>
+              <span class="amount-currency">{{ formatCurrencyCode(cashierReport()?.currency ?? 'SAR') }}</span>
+            </dd>
+          </div>
+          <div class="stat-row">
+            <dt>عدد المعاملات</dt>
+            <dd>{{ cashierReport()?.totalTransactions ?? 0 }}</dd>
+          </div>
+        </dl>
+      </article>
+
+      <article class="report-card">
+        <h3>تقرير الاسترداد</h3>
+        <p class="report-desc">إجمالي مبالغ وعدد عمليات الاسترداد</p>
+
+        <dl class="stats">
+          <div class="stat-row amount-row">
+            <dt>إجمالي المبلغ</dt>
+            <dd class="amount-cell">
+              <span class="amount-value">{{ formatAmountValue(refundReport()?.totalAmount ?? 0) }}</span>
+              <span class="amount-currency">{{ formatCurrencyCode(refundReport()?.currency ?? 'SAR') }}</span>
+            </dd>
+          </div>
+          <div class="stat-row">
+            <dt>عدد عمليات الاسترداد</dt>
+            <dd>{{ refundReport()?.totalRefunds ?? 0 }}</dd>
+          </div>
+        </dl>
+      </article>
+    </div>
+  }
+</section>

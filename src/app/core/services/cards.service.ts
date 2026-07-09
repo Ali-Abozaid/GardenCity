@@ -1,15 +1,18 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   AddFundsRequest,
   BalanceResponse,
   CardDetailsResponse,
+  CashierReportResponse,
   DeductionRequest,
   NewTopupRequest,
   PagedCardsResponse,
   PrintCardResponse,
+  RefundReportResponse,
+  ReportQueryParams,
   ReprintRequest,
   RefundRequest,
 } from '../models/card.model';
@@ -57,5 +60,102 @@ export class CardsService {
 
   getCardDetails(cardNumber: string): Observable<CardDetailsResponse> {
     return this.http.get<CardDetailsResponse>(`${this.baseUrl}/cards/${cardNumber}`);
+  }
+
+  getCashierReport(params: ReportQueryParams): Observable<CashierReportResponse> {
+    return this.http
+      .get<Record<string, unknown>>(`${this.baseUrl}/cashier-report`, {
+        params: this.buildReportParams(params),
+      })
+      .pipe(map((response) => this.normalizeCashierReport(response)));
+  }
+
+  getRefundReport(params: ReportQueryParams): Observable<RefundReportResponse> {
+    return this.http
+      .get<Record<string, unknown>>(`${this.baseUrl}/refund-report`, {
+        params: this.buildReportParams(params),
+      })
+      .pipe(map((response) => this.normalizeRefundReport(response)));
+  }
+
+  private normalizeCashierReport(data: Record<string, unknown>): CashierReportResponse {
+    return {
+      totalAmount: this.readNumber(
+        data,
+        'totalAmount',
+        'TotalAmount',
+        'totalAmountTransactions',
+        'TotalAmountTransactions',
+      ),
+      totalTransactions: this.readNumber(
+        data,
+        'totalTransactions',
+        'TotalTransactions',
+        'totalNumberOfTransactions',
+        'TotalNumberOfTransactions',
+      ),
+      currency: this.readString(data, 'currency', 'Currency'),
+    };
+  }
+
+  private normalizeRefundReport(data: Record<string, unknown>): RefundReportResponse {
+    return {
+      totalAmount: this.readNumber(
+        data,
+        'totalAmount',
+        'TotalAmount',
+        'totalAmountRefunds',
+        'TotalAmountRefunds',
+      ),
+      totalRefunds: this.readNumber(
+        data,
+        'totalRefunds',
+        'TotalRefunds',
+        'totalNumberOfRefunds',
+        'TotalNumberOfRefunds',
+      ),
+      currency: this.readString(data, 'currency', 'Currency'),
+    };
+  }
+
+  private readNumber(data: Record<string, unknown>, ...keys: string[]): number {
+    for (const key of keys) {
+      const value = data[key];
+      if (typeof value === 'number' && !Number.isNaN(value)) {
+        return value;
+      }
+
+      if (typeof value === 'string' && value.trim()) {
+        const parsed = Number(value);
+        if (!Number.isNaN(parsed)) {
+          return parsed;
+        }
+      }
+    }
+
+    return 0;
+  }
+
+  private readString(data: Record<string, unknown>, ...keys: string[]): string | undefined {
+    for (const key of keys) {
+      const value = data[key];
+      if (typeof value === 'string' && value.trim()) {
+        return value;
+      }
+    }
+
+    return undefined;
+  }
+
+  private buildReportParams(params: ReportQueryParams): HttpParams {
+    let httpParams = new HttpParams()
+      .set('FromDate', params.fromDate)
+      .set('ToDate', params.toDate);
+
+    if (params.cashierId?.trim()) {
+      httpParams = httpParams.set('CashierId', params.cashierId.trim());
+    }
+
+    return httpParams;
   }
 }

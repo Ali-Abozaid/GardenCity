@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   ApplicationRole,
@@ -26,6 +26,14 @@ export class UsersService {
     }
 
     return this.http.get<PagedUsersResponse>(this.baseUrl, { params });
+  }
+
+  getCashiers(): Observable<UserResponse[]> {
+    return this.getUsers().pipe(
+      map((response) =>
+        response.items.filter((user) => user.role === 'Cashier' || user.role === 'Admin'),
+      ),
+    );
   }
 
   getUserById(userId: string): Observable<UserResponse> {
