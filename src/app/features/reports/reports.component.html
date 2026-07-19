@@ -1,95 +1,209 @@
 <section class="reports-page">
-    <header class="page-header">
-      <div>
-        <h1>التقارير</h1>
-        <p>تقارير الكاشير والاسترداد حسب الفترة الزمنية</p>
+  <header class="page-header">
+    <div>
+      <h1>التقارير</h1>
+      <p>تقارير الكاشير والاسترداد ومعاملات البطاقات</p>
+    </div>
+  </header>
+
+  @if (errorMessage()) {
+    <div class="alert error" role="alert">{{ errorMessage() }}</div>
+  }
+
+  <div class="filter-card">
+    <h2>تقرير الكاشير والاسترداد</h2>
+    <form class="filter-form" [formGroup]="filterForm" (ngSubmit)="loadReports()">
+      <div class="form-grid">
+        <div class="field">
+          <label for="cashierId">الكاشير / المسؤول</label>
+          <select id="cashierId" formControlName="cashierId">
+            <option value="">الكل</option>
+            @for (cashier of cashiers(); track cashier.id) {
+              <option [value]="cashier.id">
+                {{ cashier.displayName }} ({{ getRoleLabel(cashier.role) }})
+              </option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="fromDate">من تاريخ</label>
+          <input id="fromDate" type="datetime-local" formControlName="fromDate" />
+          @if (filterForm.controls.fromDate.touched && filterForm.controls.fromDate.invalid) {
+            <span class="field-error">تاريخ البداية مطلوب</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="toDate">إلى تاريخ</label>
+          <input id="toDate" type="datetime-local" formControlName="toDate" />
+          @if (filterForm.controls.toDate.touched && filterForm.controls.toDate.invalid) {
+            <span class="field-error">تاريخ النهاية مطلوب</span>
+          }
+        </div>
       </div>
-    </header>
-  
-    @if (errorMessage()) {
-      <div class="alert error" role="alert">{{ errorMessage() }}</div>
-    }
-  
-    <div class="filter-card">
-      <h2> التقرير</h2>
-      <form class="filter-form" [formGroup]="filterForm" (ngSubmit)="loadReports()">
-        <div class="form-grid">
-          <div class="field">
-            <label for="cashierId">الكاشير / المسؤول</label>
-            <select id="cashierId" formControlName="cashierId">
-              <option value="">الكل</option>
-              @for (cashier of cashiers(); track cashier.id) {
-                <option [value]="cashier.id">
-                  {{ cashier.displayName }} ({{ getRoleLabel(cashier.role) }})
-                </option>
-              }
-            </select>
+
+      <button class="primary-btn" type="submit" [disabled]="isLoading()">
+        {{ isLoading() ? 'جاري التحميل...' : 'عرض التقارير' }}
+      </button>
+    </form>
+  </div>
+
+  @if (isLoading()) {
+    <div class="state-box">جاري تحميل التقارير...</div>
+  } @else if (hasSearched()) {
+    <div class="reports-grid">
+      <article class="report-card">
+        <h3>تقرير الكاشير</h3>
+        <p class="report-desc">إجمالي المبالغ وعدد المعاملات</p>
+
+        <dl class="stats">
+          <div class="stat-row amount-row">
+            <dt>إجمالي المبلغ</dt>
+            <dd class="amount-cell">
+              <span class="amount-value">{{ formatAmountValue(cashierReport()?.totalAmount ?? 0) }}</span>
+              <span class="amount-currency">{{ formatCurrencyCode(cashierReport()?.currency ?? 'SAR') }}</span>
+            </dd>
           </div>
-  
-          <div class="field">
-            <label for="fromDate">من تاريخ</label>
-            <input id="fromDate" type="datetime-local" formControlName="fromDate" />
-            @if (filterForm.controls.fromDate.touched && filterForm.controls.fromDate.invalid) {
-              <span class="field-error">تاريخ البداية مطلوب</span>
-            }
+          <div class="stat-row">
+            <dt>عدد المعاملات</dt>
+            <dd>{{ cashierReport()?.totalTransactions ?? 0 }}</dd>
           </div>
-  
-          <div class="field">
-            <label for="toDate">إلى تاريخ</label>
-            <input id="toDate" type="datetime-local" formControlName="toDate" />
-            @if (filterForm.controls.toDate.touched && filterForm.controls.toDate.invalid) {
-              <span class="field-error">تاريخ النهاية مطلوب</span>
-            }
+        </dl>
+      </article>
+
+      <article class="report-card">
+        <h3>تقرير الاسترداد</h3>
+        <p class="report-desc">إجمالي مبالغ وعدد عمليات الاسترداد</p>
+
+        <dl class="stats">
+          <div class="stat-row amount-row">
+            <dt>إجمالي المبلغ</dt>
+            <dd class="amount-cell">
+              <span class="amount-value">{{ formatAmountValue(refundReport()?.totalAmount ?? 0) }}</span>
+              <span class="amount-currency">{{ formatCurrencyCode(refundReport()?.currency ?? 'SAR') }}</span>
+            </dd>
+          </div>
+          <div class="stat-row">
+            <dt>عدد عمليات الاسترداد</dt>
+            <dd>{{ refundReport()?.totalRefunds ?? 0 }}</dd>
+          </div>
+        </dl>
+      </article>
+    </div>
+  }
+
+  <div class="transactions-card">
+    <div class="transactions-header">
+      <div>
+        <h2>معاملات البطاقات</h2>
+        <p>عرض جميع معاملات البطاقات مع البحث والتصفح</p>
+      </div>
+      <span class="count-badge">{{ transactionsTotal() }} معاملة</span>
+    </div>
+
+    <div class="transactions-toolbar">
+      <form
+        class="transactions-filters"
+        [formGroup]="transactionsDateForm"
+        (ngSubmit)="applyTransactionsFilters()"
+      >
+        <div class="field">
+          <label for="txnStartDate">من تاريخ</label>
+          <input id="txnStartDate" type="datetime-local" formControlName="startDate" />
+        </div>
+        <div class="field">
+          <label for="txnEndDate">إلى تاريخ</label>
+          <input id="txnEndDate" type="datetime-local" formControlName="endDate" />
+        </div>
+        <div class="search-field">
+          <label for="txnSearch">بحث</label>
+          <div class="search-input-wrap">
+            <input
+              id="txnSearch"
+              type="search"
+              [formControl]="transactionsSearch"
+              (input)="onTransactionsSearchInput()"
+              placeholder="بحث برقم البطاقة أو الاسم..."
+              aria-label="بحث معاملات البطاقات"
+            />
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8" />
+              <path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
           </div>
         </div>
-  
-        <button class="primary-btn" type="submit" [disabled]="isLoading()">
-          {{ isLoading() ? 'جاري التحميل...' : 'عرض التقارير' }}
+        <button class="primary-btn filter-btn" type="submit" [disabled]="isLoadingTransactions()">
+          {{ isLoadingTransactions() ? 'جاري التحميل...' : 'تطبيق' }}
         </button>
       </form>
     </div>
-  
-    @if (isLoading()) {
-      <div class="state-box">جاري تحميل التقارير...</div>
-    } @else if (hasSearched()) {
-      <div class="reports-grid">
-        <article class="report-card">
-          <h3>تقرير الكاشير</h3>
-          <p class="report-desc">إجمالي المبالغ وعدد المعاملات</p>
-  
-          <dl class="stats">
-            <div class="stat-row amount-row">
-              <dt>إجمالي المبلغ</dt>
-              <dd class="amount-cell">
-                <span class="amount-value">{{ formatAmountValue(cashierReport()?.totalAmount ?? 0) }}</span>
-                <span class="amount-currency">{{ formatCurrencyCode(cashierReport()?.currency ?? 'SAR') }}</span>
-              </dd>
-            </div>
-            <div class="stat-row">
-              <dt>عدد المعاملات</dt>
-              <dd>{{ cashierReport()?.totalTransactions ?? 0 }}</dd>
-            </div>
-          </dl>
-        </article>
-  
-        <article class="report-card">
-          <h3>تقرير الاسترداد</h3>
-          <p class="report-desc">إجمالي مبالغ وعدد عمليات الاسترداد</p>
-  
-          <dl class="stats">
-            <div class="stat-row amount-row">
-              <dt>إجمالي المبلغ</dt>
-              <dd class="amount-cell">
-                <span class="amount-value">{{ formatAmountValue(refundReport()?.totalAmount ?? 0) }}</span>
-                <span class="amount-currency">{{ formatCurrencyCode(refundReport()?.currency ?? 'SAR') }}</span>
-              </dd>
-            </div>
-            <div class="stat-row">
-              <dt>عدد عمليات الاسترداد</dt>
-              <dd>{{ refundReport()?.totalRefunds ?? 0 }}</dd>
-            </div>
-          </dl>
-        </article>
+
+    @if (transactionsError()) {
+      <div class="alert error" role="alert">{{ transactionsError() }}</div>
+    }
+
+    @if (isLoadingTransactions()) {
+      <div class="state-box">جاري تحميل المعاملات...</div>
+    } @else if (transactions().length === 0) {
+      <div class="state-box">لا توجد معاملات.</div>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>رقم البطاقة</th>
+              <th>صاحب البطاقة</th>
+              <th>المبلغ</th>
+              <th>اسم المُصدر</th>
+              <th>التاريخ</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (txn of transactions(); track txn.id || $index) {
+              <tr>
+                <td>{{ txn.cardNumber }}</td>
+                <td>
+                  <div class="holder-cell">
+                    <span>{{ txn.holderName }}</span>
+                    <small>{{ txn.holderPhoneNumber }}</small>
+                  </div>
+                </td>
+                <td>
+                  <span class="amount-cell">
+                    <span class="amount-value small">{{ formatAmountValue(txn.amount) }}</span>
+                    <span class="amount-currency">{{ formatCurrencyCode(txn.currency) }}</span>
+                  </span>
+                </td>
+                <td>{{ txn.issuerName || '—' }}</td>
+                <td>{{ formatDate(txn.createdAtUtc) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination">
+        <button
+          type="button"
+          class="page-btn"
+          [disabled]="transactionsPage() <= 1 || isLoadingTransactions()"
+          (click)="goToTransactionsPage(transactionsPage() - 1)"
+        >
+          السابق
+        </button>
+        <span class="page-info">
+          صفحة {{ transactionsPage() }} من {{ transactionsTotalPages() }}
+        </span>
+        <button
+          type="button"
+          class="page-btn"
+          [disabled]="transactionsPage() >= transactionsTotalPages() || isLoadingTransactions()"
+          (click)="goToTransactionsPage(transactionsPage() + 1)"
+        >
+          التالي
+        </button>
       </div>
     }
-  </section>
+  </div>
+</section>

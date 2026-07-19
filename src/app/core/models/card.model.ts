@@ -114,3 +114,30 @@ export interface RefundReportResponse {
   totalRefunds: number;
   currency?: string;
 }
+
+export interface CardTransactionsQueryParams {
+  pageIndex?: number;
+  pageSize?: number;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface CardTransactionReportItem {
+  id: string;
+  cardNumber: string;
+  holderName: string;
+  holderPhoneNumber: string;
+  amount: number;
+  quantity: number;
+  currency: string;
+  issuerName: string | null;
+  createdAtUtc: string;
+}
+
+export interface PagedCardTransactionsResponse {
+  pageIndex: number;
+  pageSize: number;
+  totalCount: number;
+  items: CardTransactionReportItem[];
+}

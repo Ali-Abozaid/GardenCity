@@ -6,9 +6,12 @@ import {
   AddFundsRequest,
   BalanceResponse,
   CardDetailsResponse,
+  CardTransactionReportItem,
+  CardTransactionsQueryParams,
   CashierReportResponse,
   DeductionRequest,
   NewTopupRequest,
+  PagedCardTransactionsResponse,
   PagedCardsResponse,
   PrintCardResponse,
   RefundReportResponse,
@@ -78,6 +81,32 @@ export class CardsService {
       .pipe(map((response) => this.normalizeRefundReport(response)));
   }
 
+  getCardTransactions(
+    params: CardTransactionsQueryParams = {},
+  ): Observable<PagedCardTransactionsResponse> {
+    let httpParams = new HttpParams()
+      .set('PageIndex', String(params.pageIndex ?? 1))
+      .set('PageSize', String(params.pageSize ?? 20));
+
+    if (params.search?.trim()) {
+      httpParams = httpParams.set('Search', params.search.trim());
+    }
+
+    if (params.startDate?.trim()) {
+      httpParams = httpParams.set('StartDate', params.startDate.trim());
+    }
+
+    if (params.endDate?.trim()) {
+      httpParams = httpParams.set('EndDate', params.endDate.trim());
+    }
+
+    return this.http
+      .get<Record<string, unknown>>(`${this.baseUrl}/card-transactions`, {
+        params: httpParams,
+      })
+      .pipe(map((response) => this.normalizeCardTransactions(response)));
+  }
+
   private normalizeCashierReport(data: Record<string, unknown>): CashierReportResponse {
     return {
       totalAmount: this.readNumber(
@@ -116,6 +145,49 @@ export class CardsService {
       ),
       currency: this.readString(data, 'currency', 'Currency'),
     };
+  }
+
+  private normalizeCardTransactions(data: Record<string, unknown>): PagedCardTransactionsResponse {
+    const rawItems = this.readArray(data, 'items', 'Items', 'data', 'Data');
+    const pageSize = this.readNumber(data, 'pageSize', 'PageSize') || 20;
+    const pageIndex =
+      this.readNumber(data, 'pageIndex', 'PageIndex', 'page', 'Page') || 1;
+
+    return {
+      pageIndex,
+      pageSize,
+      totalCount: this.readNumber(data, 'totalCount', 'TotalCount', 'total', 'Total'),
+      items: rawItems.map((item) => this.normalizeCardTransactionItem(item)),
+    };
+  }
+
+  private normalizeCardTransactionItem(item: unknown): CardTransactionReportItem {
+    const data = (item ?? {}) as Record<string, unknown>;
+
+    return {
+      id: this.readString(data, 'id', 'Id') ?? '',
+      cardNumber: this.readString(data, 'cardNumber', 'CardNumber') ?? '—',
+      holderName: this.readString(data, 'holderName', 'HolderName') ?? '—',
+      holderPhoneNumber:
+        this.readString(data, 'holderPhoneNumber', 'HolderPhoneNumber') ?? '—',
+      amount: this.readNumber(data, 'amount', 'Amount'),
+      quantity: this.readNumber(data, 'quantity', 'Quantity') || 1,
+      currency: this.readString(data, 'currency', 'Currency') ?? 'SAR',
+      issuerName:
+        this.readString(data, 'issuerName', 'IssuerName', 'issuedBy', 'IssuedBy') ?? null,
+      createdAtUtc: this.readString(data, 'createdAtUtc', 'CreatedAtUtc') ?? '',
+    };
+  }
+
+  private readArray(data: Record<string, unknown>, ...keys: string[]): unknown[] {
+    for (const key of keys) {
+      const value = data[key];
+      if (Array.isArray(value)) {
+        return value;
+      }
+    }
+
+    return [];
   }
 
   private readNumber(data: Record<string, unknown>, ...keys: string[]): number {

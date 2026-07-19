@@ -1,7 +1,8 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { catchError, of } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, of, Subject, switchMap } from 'rxjs';
 import {
+  CardTransactionReportItem,
   CashierReportResponse,
   RefundReportResponse,
 } from '../../core/models/card.model';
@@ -19,6 +20,7 @@ export class ReportsComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly cardsService = inject(CardsService);
   private readonly usersService = inject(UsersService);
+  private readonly transactionsSearch$ = new Subject<string>();
 
   protected readonly cashiers = signal<UserResponse[]>([]);
   protected readonly getRoleLabel = getRoleLabel;
@@ -28,6 +30,23 @@ export class ReportsComponent implements OnInit {
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly hasSearched = signal(false);
 
+  protected readonly transactions = signal<CardTransactionReportItem[]>([]);
+  protected readonly transactionsTotal = signal(0);
+  protected readonly transactionsPage = signal(1);
+  protected readonly transactionsPageSize = 20;
+  protected readonly isLoadingTransactions = signal(false);
+  protected readonly transactionsError = signal<string | null>(null);
+  protected readonly transactionsSearch = this.fb.nonNullable.control('');
+  protected readonly transactionsDateForm = this.fb.nonNullable.group({
+    startDate: ['', Validators.required],
+    endDate: ['', Validators.required],
+  });
+
+  protected readonly transactionsTotalPages = computed(() => {
+    const total = this.transactionsTotal();
+    return Math.max(1, Math.ceil(total / this.transactionsPageSize));
+  });
+
   protected readonly filterForm = this.fb.nonNullable.group({
     cashierId: [''],
     fromDate: ['', Validators.required],
@@ -36,7 +55,10 @@ export class ReportsComponent implements OnInit {
 
   ngOnInit(): void {
     this.setDefaultDateRange();
+    this.setDefaultTransactionsDateRange();
     this.loadCashiers();
+    this.setupTransactionsSearch();
+    this.loadCardTransactions(1);
   }
 
   protected loadReports(): void {
@@ -79,10 +101,12 @@ export class ReportsComponent implements OnInit {
 
     this.cardsService
       .getCashierReport(params)
-      .pipe(catchError(() => {
-        this.errorMessage.set('تعذر تحميل تقرير الكاشير.');
-        return of(null);
-      }))
+      .pipe(
+        catchError(() => {
+          this.errorMessage.set('تعذر تحميل تقرير الكاشير.');
+          return of(null);
+        }),
+      )
       .subscribe((report) => {
         if (report) {
           this.cashierReport.set(report);
@@ -92,18 +116,51 @@ export class ReportsComponent implements OnInit {
 
     this.cardsService
       .getRefundReport(params)
-      .pipe(catchError(() => {
-        if (!this.errorMessage()) {
-          this.errorMessage.set('تعذر تحميل تقرير الاسترداد.');
-        }
-        return of(null);
-      }))
+      .pipe(
+        catchError(() => {
+          if (!this.errorMessage()) {
+            this.errorMessage.set('تعذر تحميل تقرير الاسترداد.');
+          }
+          return of(null);
+        }),
+      )
       .subscribe((report) => {
         if (report) {
           this.refundReport.set(report);
         }
         finishRequest();
       });
+  }
+
+  protected onTransactionsSearchInput(): void {
+    this.transactionsSearch$.next(this.transactionsSearch.value);
+  }
+
+  protected applyTransactionsFilters(): void {
+    this.transactionsError.set(null);
+
+    if (this.transactionsDateForm.invalid) {
+      this.transactionsDateForm.markAllAsTouched();
+      this.transactionsError.set('اختر تاريخ البداية والنهاية لمعاملات البطاقات.');
+      return;
+    }
+
+    const { startDate, endDate } = this.getTransactionsDateRange();
+    if (new Date(startDate) > new Date(endDate)) {
+      this.transactionsError.set('تاريخ البداية يجب أن يكون قبل تاريخ النهاية.');
+      return;
+    }
+
+    this.loadCardTransactions(1);
+  }
+
+  protected goToTransactionsPage(page: number): void {
+    const totalPages = this.transactionsTotalPages();
+    if (page < 1 || page > totalPages || page === this.transactionsPage()) {
+      return;
+    }
+
+    this.loadCardTransactions(page);
   }
 
   protected formatAmountValue(amount: number): string {
@@ -117,12 +174,118 @@ export class ReportsComponent implements OnInit {
     return currency;
   }
 
+  protected formatDate(value: string): string {
+    if (!value) {
+      return '—';
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    return date.toLocaleString('ar-SA', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  private setupTransactionsSearch(): void {
+    this.transactionsSearch$
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        switchMap((search) => {
+          this.isLoadingTransactions.set(true);
+          this.transactionsError.set(null);
+          this.transactionsPage.set(1);
+
+          return this.cardsService
+            .getCardTransactions({
+              pageIndex: 1,
+              pageSize: this.transactionsPageSize,
+              search,
+              ...this.getOptionalTransactionsDateParams(),
+            })
+            .pipe(
+              catchError(() => {
+                this.transactionsError.set('تعذر تحميل معاملات البطاقات.');
+                return of(null);
+              }),
+            );
+        }),
+      )
+      .subscribe((response) => {
+        this.isLoadingTransactions.set(false);
+        if (!response) {
+          return;
+        }
+
+        this.transactions.set(response.items);
+        this.transactionsTotal.set(response.totalCount);
+        this.transactionsPage.set(response.pageIndex);
+      });
+  }
+
+  private loadCardTransactions(pageIndex: number): void {
+    this.isLoadingTransactions.set(true);
+    this.transactionsError.set(null);
+
+    this.cardsService
+      .getCardTransactions({
+        pageIndex,
+        pageSize: this.transactionsPageSize,
+        search: this.transactionsSearch.value,
+        ...this.getOptionalTransactionsDateParams(),
+      })
+      .subscribe({
+        next: (response) => {
+          this.isLoadingTransactions.set(false);
+          this.transactions.set(response.items);
+          this.transactionsTotal.set(response.totalCount);
+          this.transactionsPage.set(response.pageIndex);
+        },
+        error: () => {
+          this.isLoadingTransactions.set(false);
+          this.transactionsError.set('تعذر تحميل معاملات البطاقات.');
+        },
+      });
+  }
+
+  private getOptionalTransactionsDateParams(): { startDate?: string; endDate?: string } {
+    if (this.transactionsDateForm.invalid) {
+      return {};
+    }
+
+    return this.getTransactionsDateRange();
+  }
+
+  private getTransactionsDateRange(): { startDate: string; endDate: string } {
+    const raw = this.transactionsDateForm.getRawValue();
+    return {
+      startDate: this.toApiDateTime(raw.startDate, false),
+      endDate: this.toApiDateTime(raw.endDate, true),
+    };
+  }
+
   private setDefaultDateRange(): void {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
     this.filterForm.patchValue({
       fromDate: this.toInputDateTime(start, false),
       toDate: this.toInputDateTime(now, true),
+    });
+  }
+
+  private setDefaultTransactionsDateRange(): void {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    this.transactionsDateForm.patchValue({
+      startDate: this.toInputDateTime(start, false),
+      endDate: this.toInputDateTime(now, true),
     });
   }
 
@@ -154,22 +317,5 @@ export class ReportsComponent implements OnInit {
     }
 
     return date.toISOString();
-  }
-
-  private getApiErrorMessage(error: unknown): string {
-    const body = (error as { error?: { title?: string; errors?: Record<string, string[]> } })?.error;
-
-    if (body?.errors) {
-      const messages = Object.values(body.errors).flat().filter(Boolean);
-      if (messages.length > 0) {
-        return messages.join(' ');
-      }
-    }
-
-    if (body?.title) {
-      return body.title;
-    }
-
-    return 'تعذر تحميل التقارير. تحقق من الفلاتر وحاول مرة أخرى.';
   }
 }
